@@ -4,6 +4,7 @@ import threading
 from Bio import Entrez
 import re 
 import pandas as pd
+import numpy as np 
 
 dash_app = None
 
@@ -11,6 +12,8 @@ def stop_dash_app():
     global dash_app
     if dash_app:
         dash_app.server.stop()
+    else:
+        st.write("Dash app is not in control")
 
 
 
@@ -45,8 +48,10 @@ def fetch_article_details(pubmed_id):
                     if 'Abstract' in article_info:
                         abstract = article_info['Abstract']['AbstractText']
                         abstracts.extend(list(map(lambda x : remove_html_tags(x), abstract)))
+        if not abstracts:
+            abstracts.append("")
 
-        return (pubmed_id,title,abstracts)
+        return (pubmed_id,title,abstracts[0])
     except Exception as e:
         st.error(e)
 
@@ -113,22 +118,24 @@ def run_streamlit_app():
         # Perform search when the search button is clicked
         with st.spinner("Searching..."):
             search_results = search_pubmed(search_term)
-            _,col2, col3,_,_ = st.columns(5)
+            _,col2, col3,col4,_ = st.columns(5)
             with col2:
-                st.markdown(f"<div style='font-size: 20px;'>Total Available PMID'S are  <span style='color: red; font-size: 24px;'><b> {len(search_results)}</b></span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size: 20px;'>Total Available PMID'S for {search_term} are  <span style='color: red; font-size: 24px;'><b> {len(search_results)}</b></span></div>", unsafe_allow_html=True)
             if search_results:
                 data = []
-                search_results = search_results[:30]
+                search_results = search_results[:50]
                 with col3:
                     st.markdown(f"<div style='font-size: 20px;'>Displaying Top ↗️📈 <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
                 for pmid in search_results:
                     result = fetch_article_details(pmid)
-                    data.append({'PMID': result[0], 'TITLE': result[1], 'ABSTRACT': result[2]})
+                    data.append({'PMID': result[0],'SEARCH TERM':search_term,'TITLE': result[1], 'ABSTRACT': result[2]})
                 df = pd.DataFrame(data)
-                stop_dash_app()
-                dash_thread = threading.Thread(target=run_dash_app,args=(df,),daemon=True)
-                dash_thread.start() 
-                st.components.v1.iframe("http://localhost:8050", width=1800, height=2000)
+                df.index = np.arange(1,len(df)+1)
+                st.table(df)
+                #stop_dash_app()
+               # dash_thread = threading.Thread(target=run_dash_app,args=(df,),daemon=True)
+               # dash_thread.start() 
+               # st.components.v1.iframe("http://localhost:8050", width=1800, height=2000)
                # st.markdown(
                #       """
                #      <div style="display: flex; justify-content: center;">
