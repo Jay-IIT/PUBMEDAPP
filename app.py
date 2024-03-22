@@ -86,8 +86,8 @@ def run_streamlit_app():
         <style>
         button {
             height: auto;
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
+            padding-top: 20px !important;
+            padding-bottom: 20px !important;
         }
         </style>
         """,
@@ -97,23 +97,30 @@ def run_streamlit_app():
     for __ in range(3):
         st.write("\n") 
 
+    # Create three columns layout
+    _, col2, col3 = st.columns([1, 3, 1])
 
-     # Autocomplete text input for entering search terms
-    search_term = st.text_input("Enter Pubmed Search term")
-    search_term = search_term.capitalize()
+    # Add label and text input in the second column
+    with col2:
+        st.markdown("<div style='font-size: 25px;color: Blue;'>Enter Your Search Term</span></div>", unsafe_allow_html=True)
+        search_term = st.text_input("", value="", help='Type your search term here.')
+        search_term = search_term.capitalize()  # Optionally capitalize the input
 
-    
+ 
 
     # Search button to trigger search
-    if st.button("Search",):
+    if search_term:
         # Perform search when the search button is clicked
         with st.spinner("Searching..."):
             search_results = search_pubmed(search_term)
-            st.markdown(f"<div style='font-size: 20px;'>Total PMID'S available for Search Term {search_term} are  <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
+            _,col2, col3,_,_ = st.columns(5)
+            with col2:
+                st.markdown(f"<div style='font-size: 20px;'>Total Available PMID'S are  <span style='color: red; font-size: 24px;'><b> {len(search_results)}</b></span></div>", unsafe_allow_html=True)
             if search_results:
                 data = []
                 search_results = search_results[:30]
-                st.markdown(f"<div style='font-size: 20px;'> Displaying Top  ➡️➡️➡️ <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
+                with col3:
+                    st.markdown(f"<div style='font-size: 20px;'>Displaying Top ↗️📈 <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
                 for pmid in search_results:
                     result = fetch_article_details(pmid)
                     data.append({'PMID': result[0], 'TITLE': result[1], 'ABSTRACT': result[2]})
@@ -133,19 +140,6 @@ def run_streamlit_app():
             else:
                 st.write("No search results found.")
         
-
-
-   #st.components.v1.iframe("http://localhost:8050", width=1000, height=1000)
-   # st.markdown(
-   #     """
-   #    <div style="display: flex; justify-content: center;">
-   #        <iframe src="http://localhost:8050" width="1000" height="1000"></iframe>
-   #    </div>
-   #    """,
-   #    unsafe_allow_html=True
-   #)
-
-
 if __name__ == '__main__':
    # dash_thread = threading.Thread(target=run_dash_app,daemon=True)
    # dash_thread.start()
