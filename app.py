@@ -3,12 +3,21 @@ from Bio import Entrez
 import re 
 import pandas as pd
 import numpy as np 
+import subprocess
 
 def remove_html_tags(text):
     pattern = re.compile('<.*?>')
     text= re.sub(pattern, '', text)
     text = text.replace("\u2009", " ")
     return text
+
+import os
+
+# Define your search_pubmed, fetch_article_details, and run_streamlit_app functions here...
+
+def run_upload_script(search_term):
+    pass
+
 
 # Define function to fetch article details from PubMed using Biopython
 @st.cache_data 
@@ -132,6 +141,7 @@ def run_streamlit_app():
                 if Uploadbtn:
                     search_term = ""
                     st.balloons()
+                    run_upload_script(search_term)
                     st.success("Upload Started [Phase 2]")
         
 if __name__ == '__main__':
