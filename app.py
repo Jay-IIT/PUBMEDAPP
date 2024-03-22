@@ -141,8 +141,6 @@ def run_streamlit_app():
                 st.write("No search results found.")
         
 if __name__ == '__main__':
-   # dash_thread = threading.Thread(target=run_dash_app,daemon=True)
-   # dash_thread.start()
     try:
         run_streamlit_app()
     except KeyboardInterrupt:
