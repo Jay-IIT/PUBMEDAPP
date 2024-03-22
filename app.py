@@ -1,21 +1,8 @@
 import streamlit as st
-from dashapp import run_dash_app
-import threading
 from Bio import Entrez
 import re 
 import pandas as pd
 import numpy as np 
-
-dash_app = None
-
-def stop_dash_app():
-    global dash_app
-    if dash_app:
-        dash_app.server.stop()
-    else:
-        st.write("Dash app is not in control")
-
-
 
 def remove_html_tags(text):
     pattern = re.compile('<.*?>')
@@ -24,6 +11,7 @@ def remove_html_tags(text):
     return text
 
 # Define function to fetch article details from PubMed using Biopython
+@st.cache_data 
 def fetch_article_details(pubmed_id):
     try:
         # Construct the PubMed query
@@ -57,6 +45,7 @@ def fetch_article_details(pubmed_id):
 
 
 # PubMed search function
+@st.cache_data
 def search_pubmed(search_term):
     try:
         # Set your email address for Entrez
@@ -108,7 +97,7 @@ def run_streamlit_app():
     # Add label and text input in the second column
     with col2:
         st.markdown("<div style='font-size: 25px;color: Blue;'>Enter Your Search Term</span></div>", unsafe_allow_html=True)
-        search_term = st.text_input("", value="", help='Type your search term here.')
+        search_term = st.text_input(" ", key="search term",value="", help='Type your search term here.')
         search_term = search_term.capitalize()  # Optionally capitalize the input
 
  
@@ -119,11 +108,13 @@ def run_streamlit_app():
         with st.spinner("Searching..."):
             search_results = search_pubmed(search_term)
             _,col2, col3,col4,_ = st.columns(5)
+            reserved = st.container()
             with col2:
                 st.markdown(f"<div style='font-size: 20px;'>Total Available PMID'S for {search_term} are  <span style='color: red; font-size: 24px;'><b> {len(search_results)}</b></span></div>", unsafe_allow_html=True)
             if search_results:
                 data = []
-                search_results = search_results[:50]
+                num_results_display = 30
+                search_results = search_results[:num_results_display]
                 with col3:
                     st.markdown(f"<div style='font-size: 20px;'>Displaying Top ↗️📈 <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
                 for pmid in search_results:
@@ -132,23 +123,19 @@ def run_streamlit_app():
                 df = pd.DataFrame(data)
                 df.index = np.arange(1,len(df)+1)
                 st.table(df)
-                #stop_dash_app()
-               # dash_thread = threading.Thread(target=run_dash_app,args=(df,),daemon=True)
-               # dash_thread.start() 
-               # st.components.v1.iframe("http://localhost:8050", width=1800, height=2000)
-               # st.markdown(
-               #       """
-               #      <div style="display: flex; justify-content: center;">
-               #          <iframe src="http://localhost:8050" width="1000" height="1000"></iframe>
-               #      </div>
-               #      """,
-               #      unsafe_allow_html=True
-               #  )
             else:
                 st.write("No search results found.")
+        if search_results:
+            with col4:
+                Uploadbtn = st.button("Upload to SnowFlake")
+            with reserved:
+                if Uploadbtn:
+                    search_term = ""
+                    st.balloons()
+                    st.success("Upload Started [Phase 2]")
         
 if __name__ == '__main__':
     try:
         run_streamlit_app()
     except KeyboardInterrupt:
-        stop_dash_app()
+         exit(0)
