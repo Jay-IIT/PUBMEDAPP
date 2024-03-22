@@ -32,7 +32,7 @@ def run_dash_app(df):
         ],
         style_cell={'textAlign': 'left'},  # Left-align text in cells
         style_filter={'textAlign': 'left'},  # Left-align filter text
-        style_header={'textAlign': 'left'},  # Left-align header
+        style_header={'textAlign': 'left', 'fontWeight': 'bold', 'fontSize': '18px'},  # Left-align header
         style_table={'marginLeft': '10px'}  # Adjust left margin  # Adjust margins
     ))    
     ])        

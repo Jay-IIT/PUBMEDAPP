@@ -22,30 +22,33 @@ def remove_html_tags(text):
 
 # Define function to fetch article details from PubMed using Biopython
 def fetch_article_details(pubmed_id):
-    # Construct the PubMed query
-    handle = Entrez.efetch(db='pubmed', id=pubmed_id)
-
-    # Read and parse the XML response
-    record = Entrez.read(handle)
-    #print(record)
-
-    # Extract abstracts from the parsed record
-    abstracts = []
     try:
-        title = record['PubmedArticle'][0]['MedlineCitation']['Article']['Journal']['Title'] 
+        # Construct the PubMed query
+        handle = Entrez.efetch(db='pubmed', id=pubmed_id)
+
+        # Read and parse the XML response
+        record = Entrez.read(handle)
+        #print(record)
+
+        # Extract abstracts from the parsed record
+        abstracts = []
+        try:
+            title = record['PubmedArticle'][0]['MedlineCitation']['Article']['Journal']['Title'] 
+        except Exception as e:
+            title = 'No Title'
+
+        for article in record['PubmedArticle']:
+            if 'MedlineCitation' in article:
+                citation = article['MedlineCitation']
+                if 'Article' in citation:
+                    article_info = citation['Article']
+                    if 'Abstract' in article_info:
+                        abstract = article_info['Abstract']['AbstractText']
+                        abstracts.extend(list(map(lambda x : remove_html_tags(x), abstract)))
+
+        return (pubmed_id,title,abstracts)
     except Exception as e:
-        title = 'No Title'
-
-    for article in record['PubmedArticle']:
-        if 'MedlineCitation' in article:
-            citation = article['MedlineCitation']
-            if 'Article' in citation:
-                article_info = citation['Article']
-                if 'Abstract' in article_info:
-                    abstract = article_info['Abstract']['AbstractText']
-                    abstracts.extend(list(map(lambda x : remove_html_tags(x), abstract)))
-
-    return (pubmed_id,title,abstracts)
+        st.error(e)
 
 
 # PubMed search function
@@ -109,14 +112,16 @@ def run_streamlit_app():
             st.markdown(f"<div style='font-size: 20px;'>Total PMID'S available for Search Term {search_term} are  <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
             if search_results:
                 data = []
-                for pmid in search_results[:30]:
+                search_results = search_results[:30]
+                st.markdown(f"<div style='font-size: 20px;'> Displaying Top  ➡️➡️➡️ <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
+                for pmid in search_results:
                     result = fetch_article_details(pmid)
-                    data.append({'ID': result[0], 'TITLE': result[1], 'ABSTRACT': result[2]})
+                    data.append({'PMID': result[0], 'TITLE': result[1], 'ABSTRACT': result[2]})
                 df = pd.DataFrame(data)
                 stop_dash_app()
                 dash_thread = threading.Thread(target=run_dash_app,args=(df,),daemon=True)
                 dash_thread.start() 
-                st.components.v1.iframe("http://localhost:8050", width=1500, height=2000)
+                st.components.v1.iframe("http://localhost:8050", width=1800, height=2000)
                # st.markdown(
                #       """
                #      <div style="display: flex; justify-content: center;">
