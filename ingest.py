@@ -4,11 +4,12 @@ from core import search_pubmed_term
 from core import fetch_pubmedid_details
 from time import sleep
 import snowflake.connector
+import uuid
 
 # Set up logging
 logging.basicConfig(filename='ingest.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
-pkey = None
+pubmed_log_id = str(uuid.uuid4())
 connection = None
 # Establish connection parameters
 conn_params = {
@@ -20,8 +21,10 @@ conn_params = {
     "schema": "AD_HOC"
 }
 
-def update_status(pubmed_log_id, processed, error_log=None, status="FINISHED"):
+def update_status(processed, error_log=None, status="FINISHED"):
     try:
+        global pubmed_log_id  
+        global connection   
         cursor = connection.cursor()
         if error_log:
             cursor.execute("""
@@ -29,40 +32,44 @@ def update_status(pubmed_log_id, processed, error_log=None, status="FINISHED"):
                 SET PROCESSED = %s, ERROR_LOG = %s,
                     STATUS = %s, END_TIME = CURRENT_TIMESTAMP()
                 WHERE PUBMED_LOG_ID = %s
-            """, (processed, error_log, pubmed_log_id, status))
+            """, (processed, error_log, status,pubmed_log_id))
         else:
             cursor.execute("""
                 UPDATE PUBMED_DATA_LOG 
-                SET PROCESSED = %s, END_TIME = CURRENT_TIMESTAMP()
+                SET PROCESSED = %s, END_TIME = CURRENT_TIMESTAMP(),STATUS = %s
                 WHERE PUBMED_LOG_ID = %s
-            """, (processed, pubmed_log_id, status))
+            """, (processed,status,pubmed_log_id))
         cursor.close()
         connection.commit()
     except Exception as e:
         logging.error("Error updating Log Table into Snowflake: %s, for logid %s", e, pubmed_log_id)
 
 # Function to insert a row into the table and return PUBMED_LOG_ID
-def insert_row_return_id(search_keyword, total_pmids, status):
+def insert_row_return_id(search_keyword, total_pmids, processed, status, error_log):
     try:
+        global pubmed_log_id  
+        global connection   
         cursor = connection.cursor()
+        
         cursor.execute("""
-            INSERT INTO PUBMED_DATA_LOG 
-            (SEARCH_KEYWORD, TOTAL_PMIDS, STATUS, START_TIME)
-            VALUES (%s, %s, %s, CURRENT_TIMESTAMP())
-            RETURNING PUBMED_LOG_ID
-        """, (search_keyword, total_pmids, status))
-        pubmed_log_id = cursor.fetchone()[0]
+            INSERT INTO BPDWD.AD_HOC.PUBMED_DATA_LOG 
+                (PUBMED_LOG_ID, SEARCH_KEYWORD, TOTAL_PMIDS, PROCESSED, STATUS, ERROR_LOG, START_TIME)
+            VALUES 
+                (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP())
+        """, (pubmed_log_id, search_keyword, total_pmids, processed, status, error_log))
+        
         cursor.close()
         connection.commit()
         return pubmed_log_id
     except Exception as e:
         logging.error("Error while inserting log Table into Snowflake: %s, Search key word %s", e, search_keyword)
 
+
 # Function to insert data into the table
 def insert_to_snowflake(result):
     try:
         # Establish connection
-        connection = snowflake.connector.connect(**conn_params)
+        global connection
 
         # Construct INSERT statement dynamically
         cursor = connection.cursor()
@@ -107,7 +114,7 @@ if __name__ == "__main__":
        
         if pubmedids_list:
             connection = snowflake.connector.connect(**conn_params)
-            pkey = insert_row_return_id(connection, search_term, len(pubmedids_list), "STARTED")
+            pkey = insert_row_return_id(search_term, len(pubmedids_list), "STARTED")
             fetch_and_upload(pubmedids_list)
     except Exception as e:
         logging.error("An error occurred in the main process: %s", e)
