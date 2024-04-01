@@ -1,67 +1,36 @@
 import streamlit as st
-from Bio import Entrez
-import re 
+
 import pandas as pd
 import numpy as np 
 import subprocess
-
-def remove_html_tags(text):
-    pattern = re.compile('<.*?>')
-    text= re.sub(pattern, '', text)
-    text = text.replace("\u2009", " ")
-    return text
-
 import os
+from core import fetch_pubmedid_details
+from core import search_pubmed_term
+
+
+
 
 # Define your search_pubmed, fetch_article_details, and run_streamlit_app functions here...
 
 def run_upload_script(search_term):
-    pass
+    subprocess.Popen(["python", "ingest.py", search_term], creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 # Define function to fetch article details from PubMed using Biopython
 @st.cache_data 
 def fetch_article_details(pubmed_id):
     try:
-        # Construct the PubMed query
-        handle = Entrez.efetch(db='pubmed', id=pubmed_id)
-
-        # Read and parse the XML response
-        record = Entrez.read(handle)
-        #print(record)
-
-        # Extract abstracts from the parsed record
-        abstracts = []
-        try:
-            title = record['PubmedArticle'][0]['MedlineCitation']['Article']['Journal']['Title'] 
-        except Exception as e:
-            title = 'No Title'
-
-        for article in record['PubmedArticle']:
-            if 'MedlineCitation' in article:
-                citation = article['MedlineCitation']
-                if 'Article' in citation:
-                    article_info = citation['Article']
-                    if 'Abstract' in article_info:
-                        abstract = article_info['Abstract']['AbstractText']
-                        abstracts.extend(list(map(lambda x : remove_html_tags(x), abstract)))
-        if not abstracts:
-            abstracts.append("")
-
-        return (pubmed_id,title,abstracts[0])
+        return fetch_pubmedid_details(pubmed_id)
     except Exception as e:
         st.error(e)
+        return None
 
 
 # PubMed search function
 @st.cache_data
 def search_pubmed(search_term):
     try:
-        # Set your email address for Entrez
-        Entrez.email = "dummy@yahoo.com"
-        handle = Entrez.esearch(db="pubmed", term=search_term, retmax=100000)
-        record = Entrez.read(handle)
-        return record["IdList"]
+         return search_pubmed_term(search_term)
     except Exception as e:
         st.error(f"Error occurred during PubMed search: {e}")
         return []
@@ -128,7 +97,10 @@ def run_streamlit_app():
                     st.markdown(f"<div style='font-size: 20px;'>Displaying Top ↗️📈 <span style='color: red; font-size: 24px;'><b>{len(search_results)}</b></span></div>", unsafe_allow_html=True)
                 for pmid in search_results:
                     result = fetch_article_details(pmid)
-                    data.append({'PMID': result[0],'SEARCH TERM':search_term,'TITLE': result[1], 'ABSTRACT': result[2]})
+                    if result:
+                        data.append({'PMID': result[0],'SEARCH TERM':search_term,
+                                    'TITLE': result[1], 'ABSTRACT': result[2],
+                                    'AUTHOR':result[3],'KEYWORDS':result[4]})
                 df = pd.DataFrame(data)
                 df.index = np.arange(1,len(df)+1)
                 st.table(df)
@@ -139,10 +111,10 @@ def run_streamlit_app():
                 Uploadbtn = st.button("Upload to SnowFlake")
             with reserved:
                 if Uploadbtn:
-                    search_term = ""
                     st.balloons()
                     run_upload_script(search_term)
-                    st.success("Upload Started [Phase 2]")
+                    st.success(f"Upload Started for {search_term}")
+                    search_term = ""
         
 if __name__ == '__main__':
     try:
