@@ -14,8 +14,8 @@ logging.info(f"pubmed_log_id: {pubmed_log_id}")
 connection = None
 # Establish connection parameters
 conn_params = {
-    "user": "TEST_USR_ETL",
-    "password": "8H_3TL@73sT",
+    "user": "xxxxx",
+    "password": "xxxxx",
     "account": "dn13102.us-east-1",
     "warehouse": "ETL_TEST",
     "database": "BPDWD",
