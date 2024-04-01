@@ -13,7 +13,10 @@ from core import search_pubmed_term
 # Define your search_pubmed, fetch_article_details, and run_streamlit_app functions here...
 
 def run_upload_script(search_term):
-    subprocess.Popen(["python", "ingest.py", search_term], creationflags=subprocess.CREATE_NEW_CONSOLE)
+    venv_path = os.path.join(os.path.dirname(__file__), 'venv', 'Scripts', 'activate')
+    command = f"\"{venv_path}\" && python ingest.py {search_term}"
+
+    subprocess.Popen(command, shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
 # Define function to fetch article details from PubMed using Biopython
