@@ -5,9 +5,10 @@ from core import fetch_pubmedid_details
 from time import sleep
 import snowflake.connector
 import uuid
+import json
 
 # Set up logging
-logging.basicConfig(filename='ingest.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+logging.basicConfig(filename='ingest.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
 pubmed_log_id = str(uuid.uuid4())
 logging.info(f"pubmed_log_id: {pubmed_log_id}")
@@ -110,11 +111,13 @@ def fetch_and_upload(search_term, pubmedids_list):
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) != 2:
+        logging.info(f"Received request")
+        if len(sys.argv) <= 2:
             logging.error("Usage: python ingest.py <search_term>")
             sys.exit(1)
         search_term = sys.argv[1]
-        logging.info(f"Received request: {search_term}")
+        min_date,max_date = sys.argv[2],sys.argv[3]
+        logging.info(f"Received request: {search_term},{min_date},{max_date}")
         pubmedids_list = search_pubmed_term(search_term)
        
         if pubmedids_list:
