@@ -1,7 +1,7 @@
 from Bio import Entrez
 import re 
 import xmltodict
-import json
+
 
 def fetch_pubmedid_details(pubmed_id):
     def remove_html_tags(text):

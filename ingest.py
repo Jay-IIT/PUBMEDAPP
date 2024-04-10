@@ -5,18 +5,17 @@ from core import fetch_pubmedid_details
 from time import sleep
 import snowflake.connector
 import uuid
-import json
 
 # Set up logging
-logging.basicConfig(filename='ingest.txt', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+logging.basicConfig(filename='ingest.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
 pubmed_log_id = str(uuid.uuid4())
 logging.info(f"pubmed_log_id: {pubmed_log_id}")
 connection = None
 # Establish connection parameters
 conn_params = {
-    "user": "xxxxx",
-    "password": "xxxxx",
+    "user": "TEST_USR_ETL",
+    "password": "8H_3TL@73sT",
     "account": "dn13102.us-east-1",
     "warehouse": "ETL_TEST",
     "database": "BPDWD",
@@ -72,14 +71,15 @@ def insert_row_return_id(search_keyword, total_pmids, status='STARTED'):
 def insert_to_snowflake(search_term, result):
     try:
         # Establish connection
+        global pubmed_log_id
         connection = snowflake.connector.connect(**conn_params)
 
         # Construct INSERT statement dynamically
         cursor = connection.cursor()
         cursor.execute("""
-            INSERT INTO PUBMED_DATA (PMID, SEARCH_TERM, TITLE, ABSTRACT, AUTHOR_LIST,KEYWORD_LIST)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (str(result[0]), str(search_term), str(result[1]), str(result[2]), str(result[3]), str(result[4])))
+            INSERT INTO PUBMED_DATA (PMID, SEARCH_TERM, TITLE, ABSTRACT, AUTHOR_LIST,KEYWORD_LIST,PUBMED_LOG_ID)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (str(result[0]), str(search_term), str(result[1]), str(result[2]), str(result[3]), str(result[4]),str(pubmed_log_id)))
         cursor.close()
         connection.commit()
 
@@ -111,18 +111,18 @@ def fetch_and_upload(search_term, pubmedids_list):
 
 if __name__ == "__main__":
     try:
-        logging.info(f"Received request")
-        if len(sys.argv) <= 2:
+        logging.info(f"Ingestion Application Started")
+        if len(sys.argv) != 2:
             logging.error("Usage: python ingest.py <search_term>")
             sys.exit(1)
         search_term = sys.argv[1]
-        min_date,max_date = sys.argv[2],sys.argv[3]
-        logging.info(f"Received request: {search_term},{min_date},{max_date}")
+        logging.info(f"Received request: {search_term}")
         pubmedids_list = search_pubmed_term(search_term)
-       
-        if pubmedids_list:
-            connection = snowflake.connector.connect(**conn_params)
-            insert_row_return_id(search_term, len(pubmedids_list))
-            fetch_and_upload(search_term, pubmedids_list)
+        min_date,max_date = sys.argv[2],sys.argv[3]
+        logging.info(f"Received request With Parameters: {search_term},{min_date},{max_date}")
+         
+         
+        logging.info(f"Ingestion Application Stopped Successfully")
     except Exception as e:
         logging.error("An error occurred in the main process: %s", e)
+        logging.info(f"Ingestion Application Stopped With Exception")
