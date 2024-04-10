@@ -1,8 +1,7 @@
 import sys
 import logging
-from core import search_pubmed_term
-from core import fetch_pubmedid_details
-from time import sleep
+from core import pubmed_search
+from core import pubmed_batch_download
 import uuid
 import multiprocessing as mp
 from snowflake.sqlalchemy import URL
@@ -89,7 +88,6 @@ if __name__ == "__main__":
             sys.exit(1)
         search_term = sys.argv[1]
         logging.info(f"Received request: {search_term}")
-        pubmedids_list = search_pubmed_term(search_term)
         min_date,max_date = sys.argv[2],sys.argv[3]
         logging.info(f"Received request With Parameters: {search_term},{min_date},{max_date}")
         if min_date == "None" or max_date == "None":
