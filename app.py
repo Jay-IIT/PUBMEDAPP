@@ -55,7 +55,7 @@ def run_streamlit_app():
 
     hide_menu_style = """
             <style>
-            MainMenu {visibility: hidden;}
+            #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             </style>
             """
