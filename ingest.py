@@ -4,7 +4,7 @@ from core import pubmed_search
 from core import pubmed_batch_download
 import uuid
 import multiprocessing as mp
-from snowflake.connector.connect import Connect
+from snowflake.connector import connect as Connect
  
 
 
