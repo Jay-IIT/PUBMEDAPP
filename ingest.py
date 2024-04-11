@@ -99,7 +99,7 @@ def process_batch(args):
         result = pubmed_batch_download(search_term, search_results, batch_size, start)
         insert_to_datatbl(result)
         logging.info(f"Downloaded Data {start} to {end}")
-        return end - start
+        return end - start  
     except Exception as e:
         logging.error("Error inserting data into Snowflake: {e} for Records {start} to {end}")
         raise e
@@ -117,7 +117,7 @@ def fetch_and_upload(search_results, search_term):
             processed_counts = pool.map(process_batch, args_list)
 
         # After all processes are finished, update log table
-        processed = sum(processed_counts)
+        processed = sum(processed_counts) + 1
         update_log_table(processed)
     except Exception as e:
         logging.error("An error occurred in the fetch_and_upload: %s", e)
