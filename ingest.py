@@ -82,12 +82,12 @@ def insert_to_datatbl(data_rows, cursor):
         cursor,connection = get_cursor()
         # Extracting data from data_rows and preparing it for bulk insert
         values = [(row['PMID'], row['SEARCH_TERM'], row['TITLE'], row['ABSTRACT'],
-                   row['AUTHOR_LIST'], row['KEYWORD_LIST'], pubmed_log_id) for row in data_rows]
+                   row['AUTHOR_LIST'], row['KEYWORD_LIST'], row['PMCID'] ,pubmed_log_id) for row in data_rows]
 
         # Performing bulk insert
         cursor.executemany("""
-            INSERT INTO PUBMED_DATA (PMID, SEARCH_TERM, TITLE, ABSTRACT, AUTHOR_LIST, KEYWORD_LIST, PUBMED_LOG_ID)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)""", values)
+            INSERT INTO PUBMED_DATA (PMID, SEARCH_TERM, TITLE, ABSTRACT, AUTHOR_LIST, KEYWORD_LIST,PMCID,PUBMED_LOG_ID)
+            VALUES (%s, %s, %s, %s, %s, %s, %s,%s)""", values)
         cursor.close()
         connection.commit() 
     except Exception as e:
