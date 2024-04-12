@@ -1,7 +1,9 @@
 from Bio import Entrez
 import re 
 import xmltodict
-
+import logging
+ 
+logging.basicConfig(filename='core.log', level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
 def fetch_pubmedid_details(pubmed_id):
     def remove_html_tags(text):
@@ -77,7 +79,52 @@ def pubmed_search(search_term,min_date=None,max_date=None):
     except Exception as e:
         return []
 
-def get_details(article,search_term):
+def get_PubmedBookArticle_details(article,search_term):
+    parsed_result = dict()
+    parsed_result['SEARCH TERM'] = search_term
+    
+    try:
+        parsed_result['TITLE'] = article['BookDocument']['ArticleTitle']['#text']
+    except:
+        parsed_result['TITLE'] = " "
+    
+    try:
+        parsed_result['PMID'] = article['BookDocument']['PMID']['#text']
+    except:
+        parsed_result['PMID'] = " "
+
+    try:
+        parsed_result['ABSTRACT'] = article['BookDocument']['Abstract']['AbstractText']
+    except:
+        parsed_result['ABSTRACT'] =   " "
+
+    if "#text" in article['BookDocument']['Abstract']['AbstractText']:  
+        try:
+            parsed_result['ABSTRACT'] =  article['BookDocument']['Abstract']['AbstractText']["#text"]
+        except Exception as e:
+            parsed_result['ABSTRACT'] = " "
+
+    try:
+        parsed_result['AUTHOR'] = ",".join([author["LastName"] + " " + author["ForeName"]
+                                            for author in
+                                            article['BookDocument']['AuthorList']['Author']])
+    except:
+        parsed_result['AUTHOR'] = " "
+
+    
+    parsed_result['KEYWORDS'] = " "
+
+    
+    parsed_result['PMC'] = " "
+
+    return parsed_result
+    
+  
+
+
+
+def get_PubmedArticle_details(article,search_term):
+
     parsed_result = dict()
     parsed_result['SEARCH TERM'] = search_term
     try:
@@ -93,41 +140,52 @@ def get_details(article,search_term):
         parsed_result['ABSTRACT'] = article['MedlineCitation']['Article']['Abstract']['AbstractText']["#text"]
     except:
         parsed_result['ABSTRACT'] = None
-    
+
     if parsed_result['ABSTRACT'] is None:
         try:
             parsed_result['ABSTRACT'] = " "
             for abstract in article['MedlineCitation']['Article']['Abstract']['AbstractText']:
                 parsed_result['ABSTRACT'] += abstract["#text"]
         except Exception as e:
-                parsed_result['ABSTRACT'] = None
+            parsed_result['ABSTRACT'] = None
 
     if parsed_result['ABSTRACT'] is None:
         try:
-            parsed_result['ABSTRACT'] =  article['MedlineCitation']['Article']['Abstract'] 
+            parsed_result['ABSTRACT'] = article['MedlineCitation']['Article']['Abstract']
         except Exception as e:
-                parsed_result['ABSTRACT'] = "  "
+            parsed_result['ABSTRACT'] = "  "
 
-    if "AbstractText" in parsed_result['ABSTRACT'] :
+    if "AbstractText" in parsed_result['ABSTRACT']:
         try:
-            parsed_result['ABSTRACT'] =  parsed_result['ABSTRACT']["AbstractText"]
+            parsed_result['ABSTRACT'] = parsed_result['ABSTRACT']["AbstractText"]
         except Exception as e:
-                parsed_result['ABSTRACT'] = "  "         
+            parsed_result['ABSTRACT'] = "  "
 
     try:
-        parsed_result['AUTHOR'] = ",".join([author["LastName"]+" "+author["ForeName"] 
-                                            for author in article['MedlineCitation']['Article']['AuthorList']['Author']])
+        parsed_result['AUTHOR'] = ",".join([author["LastName"] + " " + author["ForeName"]
+                                            for author in
+                                            article['MedlineCitation']['Article']['AuthorList']['Author']])
     except:
         parsed_result['AUTHOR'] = " "
 
     try:
-        parsed_result['KEYWORDS'] = ",".join([keyword["#text"] 
-                                            for keyword in article['MedlineCitation']["KeywordList"]["Keyword"]])
+        parsed_result['KEYWORDS'] = ",".join([keyword["#text"]
+                                              for keyword in article['MedlineCitation']["KeywordList"]["Keyword"]])
     except:
         parsed_result['KEYWORDS'] = " "
-    
+
+    try:
+        parsed_result['PMC'] = ",".join([keyword["#text"]
+                                            for keyword in article['PubmedData']["ArticleIdList"]["ArticleId"]
+                                                 if keyword['@IdType'] == 'pmc' ])
+    except:
+        parsed_result['PMC'] = " "
+
     return parsed_result
     
+
+
+
 def pubmed_batch_download(search_term,search_results,batch_size,start=0):
     try:
         stream = Entrez.efetch(
@@ -145,14 +203,24 @@ def pubmed_batch_download(search_term,search_results,batch_size,start=0):
         parsed_data = xmltodict.parse(data)
         result = []
         try:
-            articles = parsed_data["PubmedArticleSet"]['PubmedArticle']
-        except:
-            return result
+            if 'PubmedArticle' in parsed_data["PubmedArticleSet"]['PubmedArticle']:
+                articles = parsed_data["PubmedArticleSet"]['PubmedArticle']
+                if type(articles) == dict():
+                    result.append(get_PubmedArticle_details(articles,search_term))
+                for article in articles:
+                    result.append(get_PubmedArticle_details(article,search_term))
+        except Exception as e:
+            logging.error(f"Error fetch pubmed article {e} ")
 
-        if type(articles) == dict():
-            return get_details(articles,search_term)
-        for article in articles:
-            result.append(get_details(article,search_term))
+        try:
+            if 'PubmedBookArticle' in parsed_data["PubmedArticleSet"]['PubmedBookArticle']:
+                articles = parsed_data["PubmedArticleSet"]['PubmedBookArticle']
+                if type(articles) == dict():
+                    result.append(get_PubmedBookArticle_details(articles,search_term))
+                for article in articles:
+                    result.append(get_PubmedBookArticle_details(article,search_term))
+        except Exception as e:
+            logging.error(f"Error fetch pubmed article {e} ")
          
             
         return result
